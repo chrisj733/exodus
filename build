@@ -1,0 +1,8 @@
+TAG=test
+REGISTRY=${DOCKER_REGISTRY:-harbor.unx.sas.com}
+
+IMAGE_PATH="infra-dev/adx/sas-adxr-exodus"
+
+docker build -t ${REGISTRY}/${IMAGE_PATH}:${TAG} .
+docker push ${REGISTRY}/${IMAGE_PATH}:$TAG
+
