@@ -1,0 +1,45 @@
+
+*** THIS IS ONLY A TEST, TAKE NO ACTION ***
+
+TENANT Has Expired.  It was scheduled for expiration on EXPIREDATE and as of now has been running for approximately EXPIREHRS extra hours.  
+
+Proper utilization of system resources requires a prune.  The prune will occur automatically on the next run cycle should the tenant continue to be found in a lapsed state.  
+
+If you wish to execute this function manually, then run these bash based commands to purge:
+ 
+### *** Begin Code ***
+EPOCH=$(date +%s)
+typeset -i EPOCH=$EPOCH
+
+if [ $EPOCH -gt 0 ];
+then
+  crash_timer=CRASHTIMER
+  warn_timer=WARNTIMER
+  grace_timer=GRACETIMER
+  delete_timer=DELETETIMER
+  prop_timer=PROPTIMER
+
+  NAMESPACETEST=$(kubectl describe ns TENANT | grep expiration-date= | cut -d "=" -f 2)
+  typeset -i NAMESPACETEST=$NAMESPACETEST
+
+  delta=$(($NAMESPACETEST-$EPOCH+$crash_timer+$warn_timer+grace_timer+delete_timer+prop_timer))
+
+  if [ $delta -lt 0 ];
+  then
+    s=-60
+    hours=$((delta / s))
+    echo "The tenant TENANT has expired by $hours hours.  Do you want to delete it? "
+    read yn 
+    case $yn in
+      [Yy]* ) output=$(eval "kubectl delete ns TENANT");  echo "$output";;
+      [Nn]* ) exit;;
+      * ) echo "Invalid selection.  Please rerun.";;
+    esac
+  fi;
+else
+  print "Error determining a proper date in epoch format."
+fi
+
+
+### *** End Code ***
+ 
