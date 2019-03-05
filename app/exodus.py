@@ -26,7 +26,6 @@ import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from kubernetes import client, config
-from config import conf
 from snchange import post_sn_change
 
 #ATTENTION - EXODUS is disabled by default!   To correct, change the ENABLE_Auto_Deletion=False code below to =True after exec'ing into the container.
