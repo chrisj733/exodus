@@ -19,8 +19,8 @@ def post_sn_change(tenant, owner, messagetxt, dt, environment) :
     # pass the secret data into the container as env vars
     # https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-environment-variables
 
-    snapi_user = os.environ.get('USERNAME')
-    snapi_pw = os.environ.get('PASSWORD')
+    snapi_user = os.environ.get('SNAPI_USERNAME')
+    snapi_pw = os.environ.get('SNAPI_PASSWORD')
 
     token = s.gettoken(username=snapi_user, password=snapi_pw)
 
@@ -52,12 +52,8 @@ def post_sn_change(tenant, owner, messagetxt, dt, environment) :
     print ("API isvalid: ", isvalid)
 
     if (spec_snci) :
-        
         sncid = spec_snci[0]['sys_id']
 
-    if not token or token == "":
-        # Token not found, prompt user to provide
-        token = raw_input("Provide authentication token for test cases: ").strip()
 
     ss_date = datetime.datetime.today().strftime('%Y-%m-%d-%H:%M:%S')
 
@@ -92,4 +88,8 @@ def post_sn_change(tenant, owner, messagetxt, dt, environment) :
 
     print (context)
     return (change['number'])
+
+#Example Syntax Follows.  Function is called from exodus.py, but debugging can be done by uncommenting the line below.
+#post_sn_change('chrijo', 'owner', 'messagetxt', 5, 'analyticscloud-dev.sas.com')
+
 
