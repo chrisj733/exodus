@@ -44,8 +44,7 @@ ENABLE_Post_SN=True
 #15 - Complete
 
 DEBUGLEVEL=0
-#ONCALL='adxops@wnt.sas.com'
-ONCALL='chrisj7333@gmail.com'
+ONCALL='adxops@wnt.sas.com'
 AUTHOR='chris.johnson@sas.com'
 ONCALLlist = str(ONCALL) + ";" + str(AUTHOR)
 
