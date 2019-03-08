@@ -398,7 +398,7 @@ def test_expire (namespaces) :
                             v1.patch_namespace(ns.metadata.name, body)
                             summarytxt += "\r\tAction Taken : Created SN ticket: " + str(pendingticket)
                             ticketcreated += 1
-                            todelete += 1
+                            todeletecount += 1
 
                         #  Sanity Check: We are in a loop for namespace with a negative delta, the action flag is set, we need to create a ticket and possibly delete, but posting to SN
                         #  is disabled by global variable
@@ -427,7 +427,7 @@ def test_expire (namespaces) :
                         if (pendingticket) :
                             expiredwithticket += 1
                             print ("Tenant : " + ns.metadata.name + " already has a SN ticket created to track its deletion, however auto deletion of tenants is disabled.  See " + pendingticket + " for details.")
-                            summarytxt =+ "\r\tAction Taken : Namespace already has a SN ticket and is prepped for deletion, but deletion of tenants is disabled.  See " + pendingticket + " for details."
+                            summarytxt += "\r\tAction Taken : Namespace already has a SN ticket and is prepped for deletion, but deletion of tenants is disabled.  See " + pendingticket + " for details."
 
 
                 # Sanity Check.  Where are we? We are still in the namespace loop and have identified a namespace with a negative delta.  However it was not found to be actionable, meaning that it
@@ -461,7 +461,7 @@ def test_expire (namespaces) :
                     expiredcount += 1
                     v1.patch_namespace(ns.metadata.name, body)
                     print ('End of Delta Negative Tests')
-                    summarytxt =+ "\r\tAction Taken : Prepared Namespace for Deletion by tagging CMDB flag and Exodus Action flag."
+                    summarytxt += "\r\tAction Taken : Prepared Namespace for Deletion by tagging CMDB flag and Exodus Action flag."
 
 
             # Sanity Check:  Where are we now?   We are in a loop of all namespaces.  This namespace was found to have an expiration date.
@@ -494,10 +494,6 @@ def test_expire (namespaces) :
                 # grace.  We have exhausted all tests.
                 print ("\tTenant : " + ns.metadata.name + " has reached the end of its tests." )   
                 summarytxt += "\r\tAction Taken : Namespace is not expired and thus not a candidate for deletion or tagging.\r"
-
-            else :
-
-                print ("Undefined Fringe Condition")
 
 
         # Sanity Check : Where are we now?  We are in a loop of all namespaces.  In this one, no expiration date was found inside the labels.  It is likely a system namespace.

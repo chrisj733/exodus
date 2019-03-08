@@ -19,8 +19,8 @@ def post_sn_change(tenant, owner, messagetxt, dt, environment) :
     # pass the secret data into the container as env vars
     # https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-environment-variables
 
-    snapi_user = os.environ.get('USERNAME')
-    snapi_pw = os.environ.get('PASSWORD')
+    snapi_user = os.environ.get('SNAPI_USERNAME')
+    snapi_pw = os.environ.get('SNAPI_PASSWORD')
 
     token = s.gettoken(username=snapi_user, password=snapi_pw)
 
