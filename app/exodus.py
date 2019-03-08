@@ -267,6 +267,7 @@ def test_expire (namespaces) :
 
         if (pendingticket):
             skipticket = True
+            expiredwithticket += 1
             print ("\tPending Ticket : " + str (pendingticket) + " found.")
         else:
             skipticket = False
@@ -418,7 +419,6 @@ def test_expire (namespaces) :
                         if (pendingticket) :
                             ticketcheck = True
                             print ("ServiceNow Ticket : " + pendingticket + " exists for the tracking of our actions.  Cleared hot for deletion")
-                            expiredwithticket += 1
                             delresult = exodus_kill_namespace(ns.metadata.name, ticketcheck, delta)
                             summarytxt += "\r\tAction Taken : Exodus deletion of the namespace was triggered."
 
@@ -428,7 +428,6 @@ def test_expire (namespaces) :
                     else :
                         # Sanity Check: Where are we now?  
                         if (pendingticket) :
-                            expiredwithticket += 1
                             print ("Tenant : " + ns.metadata.name + " already has a SN ticket created to track its deletion, however auto deletion of tenants is disabled.  See " + pendingticket + " for details.")
                             summarytxt += "\r\tAction Taken : Namespace already has a SN ticket and is prepped for deletion, but deletion of tenants is disabled.  See " + pendingticket + " for details."
 
