@@ -248,7 +248,6 @@ def test_expire (namespaces) :
                
         owner = owner.replace('.sas.com','@sas.com')
 
-
 	# Another good sanity check. Let's see if there is a pending Service Now ticket on this namespace, which would indicate Exodus has acted on it before.
 
         try :
@@ -317,7 +316,6 @@ def test_expire (namespaces) :
                 print ('\tSeconds Lapsed in this License for tenant ' + ns.metadata.name + ' : ' + str(delta))
                 expiredcount += 1
 
-
             # Just for info, we'll calculate our way back forward by adding the number of seconds remaining or lapsed to our time now to form a human 
             # readable version of the expiration time.
 
@@ -367,9 +365,13 @@ def test_expire (namespaces) :
                        
                         intdelta = -1*int(round(delta,0))
                         print ("Beginning the routine to build a ticket.")
+
                         messagetxt = "The tenant " + ns.metadata.name + " has expired by " + str(intdelta) + " seconds.  It has been identified as expired on at least two consecutive iterations and is now eligible for deletion.  Owner: " + owner + ".\r\n"
+
                         snmessagetxt = messagetxt + expire_str0 + expire_str1 + expire_str2 + expire_str3
+
                         oncallactionsummarytxt += snmessagetxt + "\r\n"
+
                         if (DEBUGLEVEL > 0) :
                             print (snmessagetxt)
 
@@ -394,11 +396,12 @@ def test_expire (namespaces) :
                                         "adx.sas.com/Pending.SN.Change": pendingticket,}
                                 }
                             }
+
+
                             # Now, Post the Update to the name space 
                             v1.patch_namespace(ns.metadata.name, body)
                             summarytxt += "\r\tAction Taken : Created SN ticket: " + str(pendingticket)
                             ticketcreated += 1
-                            todeletecount += 1
 
                         #  Sanity Check: We are in a loop for namespace with a negative delta, the action flag is set, we need to create a ticket and possibly delete, but posting to SN
                         #  is disabled by global variable
@@ -492,6 +495,7 @@ def test_expire (namespaces) :
             elif (delta > 0) :
                 # Sanity Check:  Still in a loop of all namespaces.  We've found a namespace with a defined expiration and that expiration is in the future or within
                 # grace.  We have exhausted all tests.
+                notexpiredcount += 1
                 print ("\tTenant : " + ns.metadata.name + " has reached the end of its tests." )   
                 summarytxt += "\r\tAction Taken : Namespace is not expired and thus not a candidate for deletion or tagging.\r"
 
