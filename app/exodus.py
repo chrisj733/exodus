@@ -29,6 +29,9 @@ from kubernetes import client, config
 from config import conf
 from snchange import post_sn_change
 
+AUTHOR = 'chris.johnson@sas.com'
+ONCALL = 'chrisj7333@gmail.com'
+NotifyList = AUTHOR + ";" + ONCALL
 
 ENABLE_ACTION_EMAIL=True
 # Enable Auto Deletion of Tenants alternatively you have delete them after the SN is posted or email received
@@ -178,6 +181,7 @@ def test_expire (namespaces) :
     # Before we begin, build an empty string to track results.
 
     summarytxt = ''
+    oncallsummarytxt = ''
 
     for ns in namespaces.items:
 
@@ -487,24 +491,27 @@ def test_expire (namespaces) :
     # is blank.  If it is, no expired clients with actionable criteria were found.
 
 
-    if (summarytxt) :     
-        # The summary flag is set, send the app owner a summary
-        send_email(summarytxt, 'chris.johnson@sas.com', 'chris.johnson@sas.com', 'Exodus Run Summary Results for Expired Clients in ' + env)
-
-    else :
-        # No tenants were detected with conditions.
-        send_email("No expired tenants with deletion criteria at this time.", 'chris.johnson@sas.com', 'chris.johnson@sas.com', 'Exodus Run Summary Results for Expired Clients in ' + env)
-
     print ("\r\n\nPrinting Execution Results...")
-    print ("\tTotal Tenants Examined : " + str(totalcount) )
-    print ("\tTotal Tenants with no Expiration : " + str(no_expirecount))
-    print ("\tTotal Non Expired Tenants : " + str(notexpiredcount))
-    print ("\tTotal Environments Expired : " + str(expiredcount))
-    print ("\t\tTotal Environments Which had SN Tickets Created : "  + str(ticketcreated))
-    print ("\t\tTotal Environments Expired with a Service Now Ticket Pending : " +  str(expiredwithticket))
-    print ("\t\tTotal Environments Triggered for deletion : " + str(todeletecount))
+    summaryline1 = "  Total Tenants Examined : " + str(totalcount) 
+    print (summaryline1)
+    summaryline2 = "  Total Tenants with no Expiration : " + str(no_expirecount)
+    print (summaryline2)
+    summaryline3 = ("  Total Non Expired Tenants : " + str(notexpiredcount))
+    print (summaryline3)
+    summaryline4 = ("  Total Environments Expired : " + str(expiredcount))
+    print (summaryline4)
+    summaryline5 = ("    Total Environments Which had SN Tickets Created : "  + str(ticketcreated))
+    print (summaryline5)
+    summaryline6 = ("    Total Environments Expired with a Service Now Ticket Pending : " +  str(expiredwithticket))
+    print (summaryline6)
+    summaryline7 = ("    Total Environments Triggered for deletion : " + str(todeletecount))
+    print (summaryline7)
 
+    oncallsummarytxt = summaryline1 + "\r\n  " + summaryline2 + "\r\n  " +  summaryline3 + "\r\n  " + summaryline4 + "\r\n    " +  summaryline5 + "\r\n    " + summaryline6 + "\r\n    " + summaryline7
 
+    summarytxt += "\r\n" +  oncallsummarytxt
+
+    send_email(oncallsummarytxt, NotifyList, 'chris.johnson@sas.com', 'Exodus Run Summary Results for Expired Clients in ' + env)
 
 
 
