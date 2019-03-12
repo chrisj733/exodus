@@ -172,12 +172,15 @@ def test_expire (namespaces) :
     totalcount = 0
     no_expirecount = 0
     expiredcount = 0
+    trialcount = 0
+    actionable_count = 0
     notexpiredcount = 0
     expiredwithticket = 0
     expiredcount = 0
     removeexpireflagcount = 0
     todeletecount = 0
     ticketcreated = 0
+    labeled_count = 0
     istrial = False
 
     print ('Getting Started...\r\n' + 'Enable Email: ' +  str(ENABLE_ACTION_EMAIL) + ' Enable Auto Deletion : ' + str(ENABLE_Auto_Deletion) + ' Enable SN Post : ' + str(ENABLE_Post_SN) + ' Debug Level : ' + str(DEBUGLEVEL) + '\r\n')
@@ -189,7 +192,6 @@ def test_expire (namespaces) :
     oncallactionsummarytxt = ''
 
     for ns in namespaces.items:
-
         # First thing we're going to do is establish where we are in the loops.  We are about to open all namespaces in the cluter with the tenant label.
         # This loop will be testing those.
         # Increment our Count
@@ -199,7 +201,7 @@ def test_expire (namespaces) :
      
         print ("\r\nTesting Namespace #" + str(totalcount) + " : ", ns.metadata.name)
 
-        # By default we ant to do no harm.  So for each namespace we will set the expiration flag and action flag to False.
+        # By default we ant to do no harm.  So for each namespace we will set/reset the expiration flag and action flag to False.
 
         is_expired = False 
         istrial = False
@@ -241,6 +243,7 @@ def test_expire (namespaces) :
         if (trialowner) :
             istrial = True        
             owner = trialowner
+            trialcount += 1
             
         elif (paidowner) :
             istrial = False
@@ -260,6 +263,7 @@ def test_expire (namespaces) :
 
         if (actionable_run > 0):
             action = True
+            actionable_count += 1
         else:
             action = False
 
@@ -267,7 +271,6 @@ def test_expire (namespaces) :
 
         if (pendingticket):
             skipticket = True
-            expiredwithticket += 1
             print ("\tPending Ticket : " + str (pendingticket) + " found.")
         else:
             skipticket = False
@@ -409,7 +412,9 @@ def test_expire (namespaces) :
                         
                         else :
                             print ("Tenant : " + ns.metadata.name + " is actionable for creating a ticket, but Service Now Integration is Disabled." )
-
+                    
+                    else :
+                        expiredwithticket += 1
                     # Sanity Check:  Where are we now?  We are still in a loop for a namespace with a negative delta.  The action flag is set.  We have handled the cases for creating a ticket
                     # We are now safe to take action, assuming we have a ticket.
 
@@ -460,10 +465,10 @@ def test_expire (namespaces) :
                     }
                     print ("Patching the Namespace with the cmdb watcher flag so the CI is created")
                     print ("Namespace has been stamped with " + str(body))
-                    expiredcount += 1
                     v1.patch_namespace(ns.metadata.name, body)
                     print ('End of Delta Negative Tests')
                     summarytxt += "\r\tAction Taken : Prepared Namespace for Deletion by tagging CMDB flag and Exodus Action flag."
+                    labeled_count += 1
 
 
             # Sanity Check:  Where are we now?   We are in a loop of all namespaces.  This namespace was found to have an expiration date.
@@ -511,7 +516,7 @@ def test_expire (namespaces) :
 
 
     print ("\r\n\nPrinting Execution Results...")
-    summaryline1 = "  Total Tenants Examined : " + str(totalcount) 
+    summaryline1 = "  Total Tenants Examined : " + str(totalcount) + "\n    Total Trial Tenants : " + str(trialcount) 
     print (summaryline1)
     summaryline2 = "  Total Tenants with no Expiration : " + str(no_expirecount)
     print (summaryline2)
@@ -519,19 +524,21 @@ def test_expire (namespaces) :
     print (summaryline3)
     summaryline4 = ("  Total Environments Expired : " + str(expiredcount))
     print (summaryline4)
-    summaryline5 = ("    Total Environments Which had SN Tickets Created : "  + str(ticketcreated))
+    summaryline5 = ("    Total Environments Which had SN Tickets Created : "  + str(ticketcreated) + "\n    Total Environments Which Were Labeled for Deletion on Next Run : " +str(labeled_count))
     print (summaryline5)
     summaryline6 = ("    Total Environments Expired with a Service Now Ticket Pending : " +  str(expiredwithticket))
     print (summaryline6)
-    summaryline7 = ("    Total Environments Triggered for deletion : " + str(todeletecount))
+    summaryline7 = ("    Total Environments Which had their Expired Flag Removed : " + str(removeexpireflagcount))
     print (summaryline7)
+    summaryline8 = ("    Total Environments Triggered for deletion : " + str(todeletecount) + "\r\n\r\n")
+    print (summaryline8)
 
-    oncallsummarytxt = summaryline1 + "\r\n  " + summaryline2 + "\r\n  " +  summaryline3 + "\r\n  " + summaryline4 + "\r\n    " +  summaryline5 + "\r\n    " + summaryline6 + "\r\n    " + summaryline7
+    oncallsummarytxt = summaryline1 + "\r\n  " + summaryline2 + "\r\n  " +  summaryline3 + "\r\n  " + summaryline4 + "\r\n    " +  summaryline5 + "\r\n    " + summaryline6 + "\r\n    " + summaryline7 + "\r\n    " + summaryline8
 
     summarytxt += "\r\n" + oncallsummarytxt
 
-    send_email(oncallsummarytxt + oncallactionsummarytxt, NotifyList, 'chris.johnson@sas.com', 'Exodus Run Summary Results for Expired Clients in ' + env)
-    send_email(summarytxt, NotifyList, 'chris.johnson@sas.com', 'Application Owner: Exodus Run Summary Results for Expired Clients in ' + env)
+    send_email(oncallsummarytxt + oncallactionsummarytxt, NotifyList, 'replies-disabled@sas.com', 'On-Call Exodus Run Summary Results for Expired Clients in ' + env)
+    send_email(summarytxt, NotifyList, 'replies-disabled@sas.com', 'Application Owner: Exodus Run Summary Results for Expired Clients in ' + env)
 
 
 
@@ -540,7 +547,6 @@ def test_expire (namespaces) :
 # an inline MIMEText.  Most email clients should display this data without the user having to open it as a true attachment.
 
 def send_email(msg, To, From, Subject):
-    
     email_msg = MIMEMultipart() 
     s = smtplib.SMTP(host='mailhost.fyi.sas.com', port=25)
     email_msg['From'] = From 
