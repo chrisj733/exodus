@@ -178,6 +178,7 @@ def test_expire (namespaces) :
     expiredwithticket = 0
     removeexpireflagcount = 0
     todeletecount = 0
+    todelete_but_count = 0
     ticketcreated = 0
     labeled_count = 0
     istrial = False
@@ -428,12 +429,14 @@ def test_expire (namespaces) :
 
                             if (delresult) : 
                                 todeletecount += 1
+
                    
                     else :
                         # Sanity Check: Where are we now?  
                         if (pendingticket) :
                             print ("Tenant : " + ns.metadata.name + " already has a SN ticket created to track its deletion, however auto deletion of tenants is disabled.  See " + pendingticket + " for details.")
                             summarytxt += "\r\tAction Taken : Namespace already has a SN ticket and is prepped for deletion, but deletion of tenants is disabled.  See " + pendingticket + " for details."
+                            todelete_but_count += 1
 
 
                 # Sanity Check.  Where are we? We are still in the namespace loop and have identified a namespace with a negative delta.  However it was not found to be actionable, meaning that it
@@ -523,16 +526,20 @@ def test_expire (namespaces) :
     print (summaryline3)
     summaryline4 = ("  Total Environments Expired : " + str(expiredcount))
     print (summaryline4)
-    summaryline5 = ("    Total Environments Which had SN Tickets Created : "  + str(ticketcreated) + "\n    Total Environments Which Were Labeled for Deletion on Next Run : " +str(labeled_count))
+    summaryline5 = ("    Total Environments Which had SN Tickets Created : "  + str(ticketcreated))
     print (summaryline5)
-    summaryline6 = ("    Total Environments Expired with a Service Now Ticket Pending : " +  str(expiredwithticket))
+    summaryline6 = ("    Total Environments Which Were Labeled for Deletion on Next Run : " +str(labeled_count))
     print (summaryline6)
-    summaryline7 = ("    Total Environments Which had their Expired Flag Removed : " + str(removeexpireflagcount))
+    summaryline7 = ("    Total Environments Expired with a Service Now Ticket Pending : " +  str(expiredwithticket))
     print (summaryline7)
-    summaryline8 = ("    Total Environments Triggered for deletion : " + str(todeletecount) + "\r\n\r\n")
+    summaryline8 = ("    Total Environments Which had their Expired Flag Removed : " + str(removeexpireflagcount))
     print (summaryline8)
+    summaryline9 = ("    Total Environments eligible for deletion, but deletion is disabled : + str(todelete_but_count))
+    print (summaryline9)
+    summaryline10 = ("    Total Environments Triggered for deletion : " + str(todeletecount) + "\r\n\r\n")
+    print (summaryline10)
 
-    oncallsummarytxt = summaryline1 + "\r\n  " + summaryline2 + "\r\n  " +  summaryline3 + "\r\n  " + summaryline4 + "\r\n    " +  summaryline5 + "\r\n    " + summaryline6 + "\r\n    " + summaryline7 + "\r\n    " + summaryline8
+    oncallsummarytxt = summaryline1 + "\r\n  " + summaryline2 + "\r\n  " +  summaryline3 + "\r\n  " + summaryline4 + "\r\n    " +  summaryline5 + "\r\n    " + summaryline6 + "\r\n    " + summaryline7 + "\r\n    " + summaryline8 + "\r\n" + summaryline9 + "\r\n    " + summaryline10 + "\r\n"
 
     summarytxt += "\r\n" + oncallsummarytxt
 
