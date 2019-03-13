@@ -176,7 +176,6 @@ def test_expire (namespaces) :
     actionable_count = 0
     notexpiredcount = 0
     expiredwithticket = 0
-    expiredcount = 0
     removeexpireflagcount = 0
     todeletecount = 0
     ticketcreated = 0
@@ -290,14 +289,15 @@ def test_expire (namespaces) :
             expire_str0 = "\nTenant: " + ns.metadata.name
             
             print ("\tTimestamp of last exodus flagged execution : " + str(actionable_run))
-            expire_str1 = "\tNatural Expiration Date of License in Epoch Format: " + str(expiry) + "\n\tTime Now in Epoch Format: " + str(datetime.datetime.now().timestamp()) + "\t"
+            expire_str1 = "\r\tNatural Expiration Date of License in Epoch Format: " + str(expiry) + "\n\tTime Now in Epoch Format: " + str(datetime.datetime.now().timestamp()) + "\t"
 
             print (expire_str1)
+
             if (istrial) :
-                expire_str2 = "\tHuman Readable Expiration Date of License: " + str(time.asctime(expiry_hr)) + "\r\n\tGrace Timer: " + \
+                expire_str2 = "\r\tHuman Readable Expiration Date of License: " + str(time.asctime(expiry_hr)) + "\r\n\tGrace Timer: " + \
                     str(gracetimer) + " Warn Timer : " + str(warntimer) + " Crash Timer : " + str(crashtimer) + " Delete Timer : " + str(deletetimer) + " Propagation Timer : " + str(proptimer)
             else :
-                expire_str2 = "\tHuman Readable Expiration Date of License: " + str(time.asctime(expiry_hr)) + "\r\n\tGrace Timer: " + \
+                expire_str2 = "\r\tHuman Readable Expiration Date of License: " + str(time.asctime(expiry_hr)) + "\r\n\tGrace Timer: " + \
                     str(gracetimer) + " Warn Timer : " + str(warntimer) + " Crash Timer : -=Not Applicable, Tenant is a Trial=-  Delete Timer : " + str(deletetimer) + " Propagation Timer : " + str(proptimer)
 
             print (expire_str2)
@@ -318,14 +318,13 @@ def test_expire (namespaces) :
                 print ('\tSeconds Remaining in this License for tenant ' + ns.metadata.name + ' : ' + str(delta))
             else :
                 print ('\tSeconds Lapsed in this License for tenant ' + ns.metadata.name + ' : ' + str(delta))
-                expiredcount += 1
 
             # Just for info, we'll calculate our way back forward by adding the number of seconds remaining or lapsed to our time now to form a human 
             # readable version of the expiration time.
 
             expiretiming = datetime.datetime.now().timestamp() + delta 
             expiretiming = time.gmtime(expiretiming)
-            expire_str3 = "\tTiming of Expiration : " + str(time.asctime(expiretiming))
+            expire_str3 = "\r\tTiming of Expiration : " + str(time.asctime(expiretiming))
 
             print (expire_str3+ "\r")
             summarytxt += str(expire_str3)
@@ -370,7 +369,7 @@ def test_expire (namespaces) :
                         intdelta = -1*int(round(delta,0))
                         print ("Beginning the routine to build a ticket.")
 
-                        messagetxt = "The tenant " + ns.metadata.name + " has expired by " + str(intdelta) + " seconds.  It has been identified as expired on at least two consecutive iterations and is now eligible for deletion.  Owner: " + owner + ".\r\n"
+                        messagetxt = "The tenant " + ns.metadata.name + " has expired by " + str(intdelta) + " seconds.  \r\tIt has been identified as expired on at least two consecutive iterations and is now eligible for deletion.  \r\tOwner: " + owner + ".\r\n"
 
                         snmessagetxt = messagetxt + expire_str0 + expire_str1 + expire_str2 + expire_str3
 
