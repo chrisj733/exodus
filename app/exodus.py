@@ -534,14 +534,14 @@ def test_expire (namespaces) :
     print (summaryline7)
     summaryline8 = ("    Total Environments Which had their Expired Flag Removed : " + str(removeexpireflagcount))
     print (summaryline8)
-    summaryline9 = ("    Total Environments Triggered for deletion : " + str(todeletecount) + "\r\n\r\n")
+    summaryline9 = ("    Total Environments Triggered for deletion : " + str(todeletecount))
     print (summaryline9)
     
     if (not ENABLE_Auto_Deletion) : 
         summaryline10 = ("    Total Environments eligible for deletion, but deletion is disabled : " + str(todelete_but_count))
         print (summaryline10)
 
-    oncallsummarytxt += summaryline1 + "\r\n  " + summaryline2 + "\r\n  " +  summaryline3 + "\r\n  " + summaryline4 + "\r\n    " +  summaryline5 + "\r\n    " + summaryline6 + "\r\n    " + summaryline7 + "\r\n    " + summaryline8 + "\r\n" + summaryline9 + "\r\n    " 
+    oncallsummarytxt += summaryline1 + "\r\n  " + summaryline2 + "\r\n  " +  summaryline3 + "\r\n  " + summaryline4 + "\r\n    " +  summaryline5 + "\r\n    " + summaryline6 + "\r\n    " + summaryline7 + "\r\n    " + summaryline8 + "\r\n    " + summaryline9 + "\r\n    " 
     if (not ENABLE_Auto_Deletion) :
         oncallsummarytxt += summaryline10 
 
