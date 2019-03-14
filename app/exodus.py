@@ -295,10 +295,10 @@ def test_expire (namespaces) :
             print (expire_str1)
 
             if (istrial) :
-                expire_str2 = "\r\tHuman Readable Expiration Date of License: " + str(time.asctime(expiry_hr)) + "\r\n\tGrace Timer: " + \
+                expire_str2 = "\tHuman Readable Expiration Date of License: " + str(time.asctime(expiry_hr)) + "\r\n\tGrace Timer: " + \
                     str(gracetimer) + " Warn Timer : " + str(warntimer) + " Crash Timer : " + str(crashtimer) + " Delete Timer : " + str(deletetimer) + " Propagation Timer : " + str(proptimer)
             else :
-                expire_str2 = "\r\tHuman Readable Expiration Date of License: " + str(time.asctime(expiry_hr)) + "\r\n\tGrace Timer: " + \
+                expire_str2 = "\tHuman Readable Expiration Date of License: " + str(time.asctime(expiry_hr)) + "\r\n\tGrace Timer: " + \
                     str(gracetimer) + " Warn Timer : " + str(warntimer) + " Crash Timer : -=Not Applicable, Tenant is a Trial=-  Delete Timer : " + str(deletetimer) + " Propagation Timer : " + str(proptimer)
 
             print (expire_str2)
@@ -325,7 +325,7 @@ def test_expire (namespaces) :
 
             expiretiming = datetime.datetime.now().timestamp() + delta 
             expiretiming = time.gmtime(expiretiming)
-            expire_str3 = "\r\tTiming of Expiration : " + str(time.asctime(expiretiming))
+            expire_str3 = "\tTiming of Expiration : " + str(time.asctime(expiretiming))
 
             print (expire_str3+ "\r")
             summarytxt += str(expire_str3)
@@ -534,12 +534,18 @@ def test_expire (namespaces) :
     print (summaryline7)
     summaryline8 = ("    Total Environments Which had their Expired Flag Removed : " + str(removeexpireflagcount))
     print (summaryline8)
-    summaryline9 = ("    Total Environments eligible for deletion, but deletion is disabled : + str(todelete_but_count))
+    summaryline9 = ("    Total Environments Triggered for deletion : " + str(todeletecount) + "\r\n\r\n")
     print (summaryline9)
-    summaryline10 = ("    Total Environments Triggered for deletion : " + str(todeletecount) + "\r\n\r\n")
-    print (summaryline10)
+    
+    if (not ENABLE_Auto_Deletion) : 
+        summaryline10 = ("    Total Environments eligible for deletion, but deletion is disabled : " + str(todelete_but_count))
+        print (summaryline10)
 
-    oncallsummarytxt = summaryline1 + "\r\n  " + summaryline2 + "\r\n  " +  summaryline3 + "\r\n  " + summaryline4 + "\r\n    " +  summaryline5 + "\r\n    " + summaryline6 + "\r\n    " + summaryline7 + "\r\n    " + summaryline8 + "\r\n" + summaryline9 + "\r\n    " + summaryline10 + "\r\n"
+    oncallsummarytxt += summaryline1 + "\r\n  " + summaryline2 + "\r\n  " +  summaryline3 + "\r\n  " + summaryline4 + "\r\n    " +  summaryline5 + "\r\n    " + summaryline6 + "\r\n    " + summaryline7 + "\r\n    " + summaryline8 + "\r\n" + summaryline9 + "\r\n    " 
+    if (not ENABLE_Auto_Deletion) :
+        oncallsummarytxt += summaryline10 
+
+    oncallsummarytxt += "\r\n"
 
     summarytxt += "\r\n" + oncallsummarytxt
 
