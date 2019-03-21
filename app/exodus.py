@@ -30,7 +30,7 @@ from config import conf
 from snchange import post_sn_change
 
 AUTHOR = 'chris.johnson@sas.com'
-ONCALL = 'chrisj7333@gmail.com'
+ONCALL = 'adxops@wnt.sas.com'
 NotifyList = AUTHOR + ";" + ONCALL
 
 ENABLE_ACTION_EMAIL=True
