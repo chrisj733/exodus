@@ -1,6 +1,6 @@
 from snapi import snapi
-import jwt
 import json
+import jwt
 import time
 import datetime
 import requests
@@ -61,6 +61,8 @@ def post_sn_change(tenant, owner, messagetxt, dt, environment) :
 
     ss_date = datetime.datetime.today().strftime('%Y-%m-%d-%H:%M:%S')
 
+    description=env + " : "
+
     change = s.createchange (
         impact='3',
         description=messagetxt,
@@ -70,7 +72,7 @@ def post_sn_change(tenant, owner, messagetxt, dt, environment) :
         reason='Update CI',
         assigned_to='chrijo',
         requested_by='chrijo',
-        watch_list=owner,
+        watch_list='chrijo',
         planned_start_date=ss_date,
         planned_end_date=ss_date,
         state='Closed',

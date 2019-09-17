@@ -4,5 +4,6 @@ cd /app
 while :
 do
   python3 /app/exodus.py
-  sleep 86400 
+  touch /probe/ready.probe
+  sleep 86400
 done
