@@ -1,4 +1,4 @@
-FROM alpine
+FROM registry.unx.sas.com/vendor/docker.io/library/alpine:3
 
 RUN apk add --update \
    bash \
