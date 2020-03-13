@@ -5,22 +5,3 @@ IMAGE_PATH="infra-dev/adx/sas-adxr-exodus"
 
 docker build -t ${REGISTRY}/${IMAGE_PATH}:${TAG} .
 docker push ${REGISTRY}/${IMAGE_PATH}:$TAG
-
-TAG=test
-REGISTRY=${DOCKER_REGISTRY:-registry.unx.sas.com}
-
-IMAGE_PATH="infra-dev/adx/sas-adxr-exodus"
-
-docker build -t ${REGISTRY}/${IMAGE_PATH}:${TAG} .
-docker push ${REGISTRY}/${IMAGE_PATH}:$TAG
-
-
-TAG=prod
-REGISTRY=${DOCKER_REGISTRY:-registry.unx.sas.com}
-
-IMAGE_PATH="infra-dev/adx/sas-adxr-exodus"
-
-docker build -t ${REGISTRY}/${IMAGE_PATH}:${TAG} .
-docker push ${REGISTRY}/${IMAGE_PATH}:$TAG
-
-
