@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 if test `find "/probe/ready.probe" -mtime -1`
 then
