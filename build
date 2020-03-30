@@ -1,7 +1,29 @@
-TAG=dev
-REGISTRY=${DOCKER_REGISTRY:-registry.unx.sas.com}
+#!/usr/bin/env /bin/bash
 
-IMAGE_PATH="infra-dev/adx/sas-adxr-exodus"
+set -o errexit
+set -o nounset
+set -o pipefail
+set -o xtrace
 
-docker build -t ${REGISTRY}/${IMAGE_PATH}:${TAG} .
-docker push ${REGISTRY}/${IMAGE_PATH}:$TAG
+declare -r _dir="$(cd "$(dirname "${0}")"/. && pwd)"
+declare -r _app_nm="${APP_NAME:-sas-adxr-exodus}"
+declare -r _local_version="${DOCKER_IMAGE_VERSION:-dev}"
+declare -r _local_tag="${_app_nm}:${_local_version}"
+declare -r _repo="${DOCKER_REGISTRY:-registry.unx.sas.com}"
+declare -r _repo_group="${DOCKER_REPO_GROUP:-infra-dev/adx}"
+declare -r _repo_version="${DOCKER_REPO_VERSION:-${_local_version}}"
+declare -r _repo_tag="${_repo}/${_repo_group}/${_app_nm}:${_repo_version}"
+
+docker build \
+    --pull \
+    --label "com.sas.analyticscloud.build-timestamp=$(date --iso-8601=ns --utc)" \
+    --label "com.sas.analyticscloud.git-commit-hash=$(git rev-parse HEAD || echo '')" \
+    --label "com.sas.analyticscloud.git-tag=$(git describe --exact-match --tags || echo '')" \
+    --label "com.sas.analyticscloud.git-url=$(git remote get-url origin || echo '')" \
+    --tag "${_local_tag}" \
+    "${_dir}"
+
+
+docker tag "${_local_tag}" "${_repo_tag}"
+docker push "${_repo_tag}"
+echo "DOCKER_IMAGE=$(docker inspect --format='{{ index .RepoDigests 0 }}' "${_repo_tag}")"
