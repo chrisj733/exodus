@@ -12,7 +12,7 @@ def post_sn_change(tenant, owner, messagetxt, dt, environment) :
     
     desc = 'Remove Expired Tenant Namespace - ' + tenant
 
-    s = snapi(authurl='https://snapi-auth.itapps.sas.com/',wrapperurl='https://snapi.itapps.sas.com')
+    s = snapi(authurl='https://snapi-auth.itapps.sas.com/',wrapperurl='https://snapi.itapps.sas.com',configfile='/tmp/snapi/conf')
 
 
 
