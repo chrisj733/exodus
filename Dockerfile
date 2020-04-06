@@ -1,4 +1,4 @@
-FROM registry.unx.sas.com/vendor/docker.io/library/alpine:3.11.3 as base
+FROM registry.unx.sas.com/vendor/docker.io/library/alpine:3.11.5 as base
 
 FROM base as builder
 
@@ -72,5 +72,6 @@ RUN chmod 755 /app/start.sh
 RUN chmod 755 /app/*.py
 
 RUN cd /app
+USER nobody
 ENTRYPOINT /app/start.sh
 
