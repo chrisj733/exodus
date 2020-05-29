@@ -34,6 +34,7 @@ ONCALL = 'chris.johnson@sas.com'
 NotifyList = AUTHOR + ";" + ONCALL
 
 #######   Important!!!  The next three variables must be set to True for Exodus to run properly.
+#######   Setting a default in case we can't pick up environment variables
 
 # Enables Summary emails to oncall and author
 ENABLE_ACTION_EMAIL=False
@@ -41,6 +42,8 @@ ENABLE_ACTION_EMAIL=False
 ENABLE_Auto_Deletion=False
 # Enable/Disable Service Now Posting
 ENABLE_Post_SN=False
+
+### Now that we have harmless defaults, we'll try to read more specific OS variables.
 
 ENABLE_ACTION_EMAIL=os.environ['EXODUS_ENABLE_ACTION_EMAIL']
 ENABLE_Auto_Deletion=os.environ['EXODUS_ENABLE_AUTO_DELETION']
@@ -579,7 +582,8 @@ def test_expire (namespaces) :
     oncallsummarytxt += "\r\n"
 
     summarytxt += "\r\n" + oncallsummarytxt
-
+    
+    
     send_email(oncallsummarytxt + oncallactionsummarytxt, NotifyList, 'replies-disabled@sas.com', 'On-Call Exodus Run Summary Results for Expired Clients in ' + env)
     send_email(summarytxt, AUTHOR, 'replies-disabled@sas.com', 'Application Owner: Exodus Run Summary Results for Expired Clients in ' + env)
 
@@ -590,15 +594,16 @@ def test_expire (namespaces) :
 # an inline MIMEText.  Most email clients should display this data without the user having to open it as a true attachment.
 
 def send_email(msg, To, From, Subject):
-    email_msg = MIMEMultipart() 
-    s = smtplib.SMTP(host='mailhost.fyi.sas.com', port=25)
-    email_msg['From'] = From 
-    email_msg['To'] = To
-    email_msg['Subject'] = Subject
+    if (ENABLE_ACTION_EMAIL) : 
+        email_msg = MIMEMultipart() 
+        s = smtplib.SMTP(host='mailhost.fyi.sas.com', port=25)
+        email_msg['From'] = From 
+        email_msg['To'] = To
+        email_msg['Subject'] = Subject
 
-    email_msg.attach(MIMEText(msg, 'plain'))
-    s.send_message(email_msg)
-    del (email_msg)
+        email_msg.attach(MIMEText(msg, 'plain'))
+        s.send_message(email_msg)
+        del (email_msg)
 
 
 # Function to send an email to a specific user with the results of a SINGLE namespace test against the expiration date and timers.
