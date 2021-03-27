@@ -58,6 +58,7 @@ ENABLE_Post_SN=strtobool(str(os.environ['EXODUS_ENABLE_POST_SN']))
 manualDeleteOverride=strtobool(str(os.environ['MANUAL_DELETE_OVERRIDE']))
 AZURE_HOSTED=strtobool(str(os.environ['AZURE_HOSTED']))
 MAIL_SERVER=str(os.environ['MAIL_HOST'])
+MAIL_PORT=str(os.environ['MAIL_PORT'])
 SNCI=str(os.environ['SNCI'])
 
 #Define the Minimum Delete threshold, logic should be roughly that we have about one weeks worth of signups.   With 7 to 10 new trials per day, after around 50, we'll determine it's time to delete.
@@ -231,9 +232,8 @@ def test_expire (namespaces) :
 
     # Build an empty string that will run with resulting
 
-    summarytxt = ''
 
-    summarytxt += str(print ('Getting Started...\r\n\r\nManual Delete Override: ' +  str(manualDeleteOverride) +  ' Enable Email: ' +  str(ENABLE_ACTION_EMAIL) + ' Enable Auto Deletion : ' + str(ENABLE_Auto_Deletion) + ' Enable SN Post : ' + str(ENABLE_Post_SN) + ' Debug Level : ' + str(DEBUGLEVEL) + '\r\n'))
+    summarytxt = str(print ('Getting Started...\r\n\r\nManual Delete Override: ' +  str(manualDeleteOverride) +  ' Enable Email: ' +  str(ENABLE_ACTION_EMAIL) + ' Enable Auto Deletion : ' + str(ENABLE_Auto_Deletion) + ' Enable SN Post : ' + str(ENABLE_Post_SN) + ' Debug Level : ' + str(DEBUGLEVEL) + '\r\n'))
     
 
     # Before we begin, build an empty string to track results.
@@ -640,7 +640,7 @@ def test_expire (namespaces) :
     oncallsummarytxt += summaryline1 + "\r\n  " + summaryline2 + "\r\n  " +  summaryline3 + "\r\n  " + summaryline4 + "\r\n    " +  summaryline5 + "\r\n    " + summaryline6 + "\r\n    " + summaryline7 + "\r\n    " + summaryline8 + "\r\n    " + summaryline9 + "\r\n    "
     if sumerr :
         oncallsummarytxt += summaryline10 
-    if (not ENABLE_Auto_Deletion) :
+    if ((not ENABLE_Auto_Deletion) and (expiredcount > MIN_DELETE)) :
         oncallsummarytxt += summaryline11 + "\r\n-----------------------CUT HERE AND PASTE INTO SERVICE NOW FOR MANUAL---------------------------\r\n" + manualDeleteString
 
     oncallsummarytxt += "\r\n"
@@ -665,7 +665,7 @@ def test_expire (namespaces) :
 def send_email(msg, To, From, Subject):
     if (ENABLE_ACTION_EMAIL) :
         email_msg = MIMEMultipart()
-        s = smtplib.SMTP(host='mailhost.na.sas.com', port=25)
+        s = smtplib.SMTP(host=MAIL_SERVER, port=MAIL_PORT)
         email_msg['From'] = From
         email_msg['To'] = To
         email_msg['Subject'] = Subject
