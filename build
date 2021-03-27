@@ -1,4 +1,4 @@
-#!/usr/bin/env /bin/bash
+#/bin/bash
 
 set -o errexit
 set -o nounset
@@ -7,13 +7,14 @@ set -o xtrace
 
 declare -r _dir="$(cd "$(dirname "${0}")"/. && pwd)"
 declare -r _app_nm="${APP_NAME:-sas-adxr-exodus}"
-declare -r _local_version="${DOCKER_IMAGE_VERSION:-dev}"
+declare -r _local_version="${DOCKER_IMAGE_VERSION:-v1.3.2}"
 declare -r _local_tag="${_app_nm}:${_local_version}"
-declare -r _repo="${DOCKER_REGISTRY:-registry.unx.sas.com}"
+declare -r _repo="${DOCKER_REGISTRY:-registry.sas.com}"
 declare -r _repo_group="${DOCKER_REPO_GROUP:-infra-dev/adx}"
 declare -r _repo_version="${DOCKER_REPO_VERSION:-${_local_version}}"
 declare -r _repo_tag="${_repo}/${_repo_group}/${_app_nm}:${_repo_version}"
 
+docker login registry.sas.com
 docker build \
     --pull \
     --label "com.sas.analyticscloud.build-timestamp=$(date --iso-8601=ns --utc)" \
@@ -24,6 +25,22 @@ docker build \
     "${_dir}"
 
 
+
+docker login registry.unx.sas.com
+
+
+
 docker tag "${_local_tag}" "${_repo_tag}"
 docker push "${_repo_tag}"
+
+echo "DOCKER_IMAGE=$(docker inspect --format='{{ index .RepoDigests 0 }}' "${_repo_tag}")"
+
+
+
+declare -r _repo2="${DOCKER_REGISTRY:-registry.unx.sas.com}"
+declare -r _repo2_tag="${_repo2}/${_repo_group}/${_app_nm}:${_repo_version}"
+
+docker tag "${_local_tag}" "${_repo2_tag}"
+docker push "${_repo2_tag}"
+
 echo "DOCKER_IMAGE=$(docker inspect --format='{{ index .RepoDigests 0 }}' "${_repo_tag}")"

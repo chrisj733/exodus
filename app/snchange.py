@@ -6,11 +6,12 @@ import datetime
 import requests
 import getpass
 import os
+#from kubernetes import client, config
 
 
 def post_sn_change(tenant, owner, messagetxt, dt, environment) : 
     
-    desc = 'Remove Expired Tenant Namespace - ' + tenant
+    desc = environment + ': Remove Expired Tenant Namespace - ' + tenant 
 
     s = snapi(authurl='https://snapi-auth.itapps.sas.com/',wrapperurl='https://snapi.itapps.sas.com',configfile='/tmp/snapi/conf')
 
@@ -19,22 +20,38 @@ def post_sn_change(tenant, owner, messagetxt, dt, environment) :
     # pass the secret data into the container as env vars
     # https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-environment-variables
 
-    snapi_user = os.environ.get('SNAPI_USERNAME')
-    snapi_pw = os.environ.get('SNAPI_PASSWORD')
+
+#    config.load_kube_config()
+#   v1 = client.CoreV1Api()
+#   secret = str(v1.read_namespaced_secret("snapi", "sas-adxr-system").data
+#   snapi_user = base64.b64decode(secret.strip().split()[0].translate(None, '}\''))
+#   snapi_pw = base64.b64decode(secret.strip().split()[1].translate(None, '}\''))
+#   print(secret)
+
+    with open ("/etc/secret/snapi/username","r") as f:
+        snapi_user = f.read()
+
+
+    with open ("/etc/secret/snapi/password","r") as f:
+        snapi_pw = f.read()
+
+
 
     token = s.gettoken(username=snapi_user, password=snapi_pw)
-
 
     if (environment == 'analyticscloud-dev.sas.com') :
        env = 'analyticscloud-dev-cluster'
     elif (environment == 'analyticscloud-test.sas.com') :
-       env = 'analyticscloud-test-cluster'
+      env = 'analyticscloud-test-cluster'
     elif (environment == 'analyticscloud.sas.com') :
        env = 'analyticscloud-prod-cluster'
-
-    print (env)
+    else :
+       env = str(environment)
 
     snci = s.getci(ci=env)
+
+    print ('snci: ' + str(snci) + '\r\n')
+    
     sncid = snci[0]['sys_id']
 
     print ("SN CI: " + str(sncid))

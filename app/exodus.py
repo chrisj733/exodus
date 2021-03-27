@@ -27,7 +27,7 @@ from distutils.util import strtobool
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from kubernetes import client, config
-from config import conf
+# from config import config
 from snchange import post_sn_change
 
 AUTHOR = 'chris.johnson@sas.com'
@@ -47,14 +47,26 @@ ENABLE_ACTION_EMAIL=False
 ENABLE_Auto_Deletion=False
 # Enable/Disable Service Now Posting
 ENABLE_Post_SN=False
+manualDeleteOverride=False
+AZURE_HOSTED=False
 
 ### Now that we have harmless defaults, we'll try to read more specific OS variables.
 
 ENABLE_ACTION_EMAIL=strtobool(str(os.environ['EXODUS_ENABLE_ACTION_EMAIL']))
 ENABLE_Auto_Deletion=strtobool(str(os.environ['EXODUS_ENABLE_AUTO_DELETION']))
 ENABLE_Post_SN=strtobool(str(os.environ['EXODUS_ENABLE_POST_SN']))
+manualDeleteOverride=strtobool(str(os.environ['MANUAL_DELETE_OVERRIDE']))
+AZURE_HOSTED=strtobool(str(os.environ['AZURE_HOSTED']))
+MAIL_SERVER=str(os.environ['MAIL_HOST'])
+SNCI=str(os.environ['SNCI'])
 
+#Define the Minimum Delete threshold, logic should be roughly that we have about one weeks worth of signups.   With 7 to 10 new trials per day, after around 50, we'll determine it's time to delete.
 
+if locals().get('MIN_DELETE'):
+   MIN_DELETE=os.environ['MIN_DELETE']
+   print(MIN_DELETE)
+else :
+   MIN_DELETE=50
 
 # Set the Level of Debugging
 # 0 - Normal level
@@ -65,14 +77,19 @@ ENABLE_Post_SN=strtobool(str(os.environ['EXODUS_ENABLE_POST_SN']))
 DEBUGLEVEL=0
 
 
-
+### We used to have a generic environment analyticscloud-test, analyticscloud.sas, etc.  The below code block is expired as of v1.3
 
 def determine_env() :
     import os
     osparm = os.environ['DOMAIN']
     return (osparm)
 
+
+
 env = determine_env()
+
+
+################
 
 def read_template(filename):
     with open(filename, 'r', encoding='utf-8') as template_file:
@@ -121,8 +138,12 @@ proptimer = 600
 timenow = datetime.datetime.now().timestamp()
 
 # Trident Controller needs a delay between deletes. Define that time in seconds below
+# v1.0.3 - Azure doesn't need as long, so we take it down some
 
-tridentdelay = 600
+storagedelay = 600
+
+if (AZURE_HOSTED):
+    storagedelay = 100
 
 
 #Debugging Output
@@ -174,11 +195,11 @@ def exodus_kill_namespace(namespace, ticketexists, delta) :
 #   dry_run = 'All'
    propagation_policy = 'Background'
    if (delta < 0) and ticketexists :
-       print ('Last Resort Sanity Check found a delta of ' + str(delta) + '.  Deletion of namespace ' + namespace + ' will now invoke.')
+       print ('Last Resort Sanity Check found a delta of ' + str(delta) + '.  TicketCheck Status: ' + str(ticketexists) + '. Deletion of namespace ' + namespace + ' will now invoke.')
        try:
           api_response = killAPI.delete_namespace(namespace, pretty=pretty, body=body, grace_period_seconds=grace_period_seconds, propagation_policy=propagation_policy)
           pprint(api_response)
-          time.sleep(tridentdelay)
+          time.sleep(storagedelay)
           return True
        except ApiException as e:
           print("Exception when calling CoreV1Api->delete_namespace: %s\n" % e)
@@ -199,6 +220,7 @@ def test_expire (namespaces) :
     expiredwithticket = 0
     removeexpireflagcount = 0
     todeletecount = 0
+    todeletecount_manual = 0
     todelete_noSN_count = 0
     todelete_SN_count = 0
     ticketcreated = 0
@@ -207,21 +229,28 @@ def test_expire (namespaces) :
     istrial = False
     sumerr = ""
 
-    print ('Getting Started...\r\n' + 'Enable Email: ' +  str(ENABLE_ACTION_EMAIL) + ' Enable Auto Deletion : ' + str(ENABLE_Auto_Deletion) + ' Enable SN Post : ' + str(ENABLE_Post_SN) + ' Debug Level : ' + str(DEBUGLEVEL) + '\r\n')
+    # Build an empty string that will run with resulting
+
+    summarytxt = ''
+
+    summarytxt += str(print ('Getting Started...\r\n\r\nManual Delete Override: ' +  str(manualDeleteOverride) +  ' Enable Email: ' +  str(ENABLE_ACTION_EMAIL) + ' Enable Auto Deletion : ' + str(ENABLE_Auto_Deletion) + ' Enable SN Post : ' + str(ENABLE_Post_SN) + ' Debug Level : ' + str(DEBUGLEVEL) + '\r\n'))
+    
 
     # Before we begin, build an empty string to track results.
 
-    summarytxt = ''
+    messagetxt = ''
     oncallsummarytxt = ''
     oncallactionsummarytxt = ''
-
+    manualDeleteString = ''
+    
     for ns in namespaces.items:
         # First thing we're going to do is establish where we are in the loops.  We are about to open all namespaces in the cluter with the tenant label.
         # This loop will be testing those.
         # Increment our Count
         totalcount += 1
-
-        summarytxt += str("\r\nTested Namespace #" + str(totalcount) + " : " + ns.metadata.name + "\r\n" )
+ 
+  
+        summarytxt += "\r\n\r\nTested Namespace #" + str(totalcount) + " : " + ns.metadata.name + "\r\n" 
 
         print ("\r\nTesting Namespace #" + str(totalcount) + " : ", ns.metadata.name)
 
@@ -283,6 +312,15 @@ def test_expire (namespaces) :
         except :
             pendingticket = False
 
+
+
+        try :
+            nsid = str((labels['adx.sas.com/id']))
+        except :
+            nsid = "NoID"
+
+        print ("\tNamespace ID : " + str(nsid) + "\r")
+
         # If we found an actionable run, we're going to set the action to True.  This is necessary because actionable_run is actually an epoch date and not boolean.
         # Can be cleaned up in future runs.
 
@@ -312,23 +350,24 @@ def test_expire (namespaces) :
             # Build a set of well formated information strings for the debugging and will be later used by Service Now tickets.  These will serve
             # as our runtime results for the delete justification.
 
-            expire_str0 = "\nTenant: " + ns.metadata.name
+            expire_str0 = "\nTenant: " + ns.metadata.name 
 
-            print ("\tTimestamp of last exodus flagged execution : " + str(actionable_run))
-            expire_str1 = "\tNatural Expiration Date of License in Epoch Format: " + str(expiry) + "\n\tTime Now in Epoch Format: " + str(datetime.datetime.now().timestamp()) + "\t"
+            print ("\r\tTimestamp of last exodus flagged execution : " + str(actionable_run))
+            
+            expire_str1 = "\tId : " + str(nsid) + "\r\tNatural Expiration Date of License in Epoch Format: " + str(expiry) + "\n\tTime Now in Epoch Format: " + str(datetime.datetime.now().timestamp()) + "\t"
 
             print (expire_str1)
 
             if (istrial==False) :
                 expire_str2 = "\tHuman Readable Expiration Date of License: " + str(time.asctime(expiry_hr)) + "\r\n\tGrace Timer: " + \
-                    str(gracetimer) + " Warn Timer : " + str(warntimer) + " Crash Timer : " + str(crashtimer) + " Delete Timer : " + str(deletetimer) + " Propagation Timer : " + str(proptimer)
+                    str(gracetimer) + " Warn Timer : " + str(warntimer) + " Crash Timer : " + str(crashtimer) + " Delete Timer : " + str(deletetimer) + " Propagation Timer : " + str(proptimer) + "\r"
             else :
                 expire_str2 = "\tHuman Readable Expiration Date of License: " + str(time.asctime(expiry_hr)) + "\r\n\tGrace Timer: " + \
-                    str(gracetimer) + " Warn Timer : " + str(warntimer) + " Crash Timer : -=Not Applicable, Tenant is a Trial=-  Delete Timer : " + str(deletetimer) + " Propagation Timer : " + str(proptimer)
+                    str(gracetimer) + " Warn Timer : " + str(warntimer) + " Crash Timer : -=Not Applicable, Tenant is a Trial=-  Delete Timer : " + str(deletetimer) + " Propagation Timer : " + str(proptimer) + "\r"
 
             print (expire_str2)
 
-            summarytxt+=("\r" + str(expire_str1) + "\n" + str(expire_str2) + "\n")
+            summarytxt += ("\r" + str(expire_str1) + "\n" + str(expire_str2) + "\n")
 
             # Use our function to get the number of seconds remaining in the trial by comparing the time now with the time of the license expiration date and our timers
             # A negative number of seconds indicates that the environment is running, 'in the red' and overdue
@@ -353,13 +392,15 @@ def test_expire (namespaces) :
             expire_str3 = "\tTiming of Expiration : " + str(time.asctime(expiretiming))
 
             print (expire_str3+ "\r")
-            summarytxt += str(expire_str3)
+            summarytxt += str(expire_str3)  
 
 
             # if the delta is below zero, then the tenant has reached their expiration plus graces.  It will be time to act by first setting an
             # Epoch Action timestamp, indicating when we first observed this condition.  An environment needs to be negative for two run cycles to be eligible for deletion.
 
             if (delta < 0) :
+
+                summarytxt += "\r\tDetermination: This namespace is expired"
 
                 # Sanity Check:  Where are we now?   We are in a loop through a set of namespaces, and we have discovered it has a negative delta.
                 # if we are set to receive summary emails, go ahead and build the summary by iteration as well as email this single namespace.
@@ -371,12 +412,12 @@ def test_expire (namespaces) :
 
                 if (action) :
 
+                    
                     # Sanity Check: Where are we now?   We have determined that this particular namespace has both a negative delta, and it's action flag is set.
                     # Therefore:
                     #   a)  It needs a service now ticket
                     #   b)  Once we have a ticket, it's eligible for deletion.
                     #
-
                     print ("Action Flag is Set")
                     print ("SkipTicket : " + str(skipticket))
 
@@ -393,9 +434,11 @@ def test_expire (namespaces) :
                         # Our Delta is negative, so we're going to just do a pretty cleanup for user reference.
 
                         intdelta = -1*int(round(delta,0))
+
                         print ("Beginning the routine to build a ticket.")
 
-                        messagetxt = "The tenant " + ns.metadata.name + " has expired by " + str(intdelta) + " seconds.  \r\tIt has been identified as expired on at least two consecutive iterations and is now eligible for deletion.  \r\tOwner: " + owner
+                        summarytxt += "\tThe tenant " + ns.metadata.name + " has expired by " + str(intdelta) + " seconds.  \r\tIt has been identified as expired on at least two consecutive iterations and is now eligible for deletion.  \r\tOwner: " + owner + "\r\n"
+
 
                         snmessagetxt = messagetxt + expire_str0 + expire_str1 + expire_str2 + expire_str3
 
@@ -410,11 +453,11 @@ def test_expire (namespaces) :
                             # Sanity Check:  Where are we now?  We are in a loop for a namespace with a negative delta, the action flag is set, and we know we need to create a ticket
                             # possibly delete the tenant AND creating tickets is enabled in the system.
 
-                            print ("Target Environment : " + env)
+                            print ("Target Environment : " + SNCI)
 
                             # Create the Service Now Ticket
 
-                            pendingticket=post_sn_change(ns.metadata.name, owner, str(snmessagetxt), delta, env)
+                            pendingticket=post_sn_change(ns.metadata.name, owner, str(snmessagetxt), delta, str(SNCI))
                             print (pendingticket)
 
                             # Build the post to the namespace label to hold this ticket info.
@@ -429,14 +472,15 @@ def test_expire (namespaces) :
 
                             # Now, Post the Update to the name space
                             v1.patch_namespace(ns.metadata.name, body)
-                            summarytxt += "\r\tAction Taken : Created SN ticket: " + str(pendingticket)
+                            summarytxt += "\r\tAction Taken : Created SN ticket: " + str(pendingticket) + "\r\n"
                             ticketcreated += 1
 
                         #  Sanity Check: We are in a loop for namespace with a negative delta, the action flag is set, we need to create a ticket and possibly delete, but posting to SN
                         #  is disabled by global variable
 
                         else :
-                            print ("Tenant : " + ns.metadata.name + " is actionable for creating a ticket, but Service Now Integration is Disabled." )
+
+                            print ("Action Taken : Tenant " + ns.metadata.name + " is actionable for creating a ticket, but Service Now Integration is Disabled." )
 
                     else :
                         expiredwithticket += 1
@@ -450,7 +494,7 @@ def test_expire (namespaces) :
                             ticketcheck = True
                             print ("ServiceNow Ticket : " + pendingticket + " exists for the tracking of our actions.  Cleared hot for deletion")
                             delresult = exodus_kill_namespace(ns.metadata.name, ticketcheck, delta)
-                            summarytxt += "\r\tAction Taken : Exodus deletion of the namespace was triggered."
+                            summarytxt += "\r\tAction Taken : Exodus deletion of the namespace was triggered.\r\n"
 
                             if (delresult) :
                                 todeletecount += 1
@@ -458,19 +502,34 @@ def test_expire (namespaces) :
                                 deleteerr = ns.metadata.name + " returned a deletion error, please check manually for cleanup.\r\n"
                                 summarytxt += str(deleteerr)
                                 sumerr += str(deleteerr)
+                        elif (manualDeleteOverride) :
+                            ticketcheck = 'ManualOverride'
+                            print ("No Service Now Ticket Exists, but running in Manual Override.  Cleared hot for deletion")
+                            delresult = exodus_kill_namespace(ns.metadata.name, ticketcheck, delta)
+                            summarytxt += "\r\tAction Taken : Exodus deletion of the namespace was triggered in Manual Override Mode"
+
+                            if (delresult) :
+                                todeletecount_manual += 1
+                            else :
+                                deleteerr = ns.metadata.name + " returned a deletion error (Manual Override), please check manually for cleanup.\r\n"
+                                summarytxt += str(deleteerr)
+                                sumerr += str(deleteerr)
+                                    
 
 
                     else :
                         # Sanity Check: Where are we now?
                         if (pendingticket) :
-                            print ("Tenant : " + ns.metadata.name + " already has a SN ticket created to track its deletion, however auto deletion of tenants is disabled.  See " + str(pendingticket) + " for details.")
-                            summarytxt += "\r\tAction Taken : Namespace already has a SN ticket and is prepped for deletion, but deletion of tenants is disabled.  See " + pendingticket + " for details."
+                            print ("Action Taken : Tenant " + ns.metadata.name + " already has a SN ticket created to track its deletion, however auto deletion of tenants is disabled.  See " + str(pendingticket) + " for details.")
+                            summarytxt += "\r\tAction Taken : Namespace already has a SN ticket and is prepped for deletion, but deletion of tenants is disabled.  See " + pendingticket + " for details.\r\n"
                             todelete_SN_count += 1
                         if (not pendingticket) :
                             print ("Tenant : " + ns.metadata.name + " does not have a SN ticket created, and auto deletion of tenants is disabled.")
-                            summarytxt += "\r\tAction Taken : Namespacespace does not have a SN ticket, SN creation is disabled, and deletion of tenants is disabled."
-                            todelete_noSN_count += 1
+                            print ("Building Manual Delete Log Stream..,\r\n")
+                            manualDeleteString += "\r" + ns.metadata.name + " : License Date : (" + str(time.asctime(expiry_hr)) + ") is eligible for deletion on " + str(time.asctime(expiretiming)) + " but SN ticket creation is disabled, and tenant deletion is disabled." 
 
+                            summarytxt += "\r\tAction Taken : Namespacespace does not have a SN ticket, SN creation is disabled, and deletion of tenants is disabled.\r\n"
+                            todelete_noSN_count += 1
 
 
                 # Sanity Check.  Where are we? We are still in the namespace loop and have identified a namespace with a negative delta.  However it was not found to be actionable, meaning that it
@@ -503,7 +562,7 @@ def test_expire (namespaces) :
                     print ("Namespace has been stamped with " + str(body))
                     v1.patch_namespace(ns.metadata.name, body)
                     print ('End of Delta Negative Tests')
-                    summarytxt += "\r\tAction Taken : Prepared Namespace for Deletion by tagging CMDB flag and Exodus Action flag."
+                    summarytxt += "\r\tAction Taken : Prepared Namespace for Deletion by tagging CMDB flag and Exodus Action flag.\r\n"
                     labeled_count += 1
 
 
@@ -529,7 +588,7 @@ def test_expire (namespaces) :
                 print ("Patching Namespace with empty Last.Exodus.Action Epoch : " + ns.metadata.name)
                 v1.patch_namespace(ns.metadata.name, body)
                 removeexpireflagcount += 1
-                summarytxt += "\r\tAction Taken : Exodus Action Flag was found, but Expiration did not warrant a deletion.   Cleared the flag."
+                summarytxt += "\r\tAction Taken : Exodus Action Flag was found, but Expiration did not warrant a deletion.   Cleared the flag.\r\n"
 
 
             elif (delta > 0) :
@@ -537,7 +596,7 @@ def test_expire (namespaces) :
                 # grace.  We have exhausted all tests.
                 notexpiredcount += 1
                 print ("\tTenant : " + ns.metadata.name + " has reached the end of its tests." )
-                summarytxt += "\r\tAction Taken : Namespace is not expired and thus not a candidate for deletion or tagging.\r\n\r\n"
+                summarytxt += "\r\tAction Taken : Namespace is not expired and thus not a candidate for deletion or tagging.\r\n"
 
 
         # Sanity Check : Where are we now?  We are in a loop of all namespaces.  In this one, no expiration date was found inside the labels.  It is likely a system namespace.
@@ -568,7 +627,7 @@ def test_expire (namespaces) :
     print (summaryline7)
     summaryline8 = ("    Total Environments Which had their Expired Flag Removed : " + str(removeexpireflagcount))
     print (summaryline8)
-    summaryline9 = ("    Total Environments that returned a successful delete : " + str(todeletecount))
+    summaryline9 = ("    Total Environments that returned a successful delete : " + str(todeletecount) + "\r\n    Total Environments that returned a successful manual delete : " + str(todeletecount_manual))
     print (summaryline9)
     if sumerr :
         summaryline10 =  ("\r\nErrors: \r\n\r\n" + sumerr)
@@ -580,17 +639,22 @@ def test_expire (namespaces) :
 
     oncallsummarytxt += summaryline1 + "\r\n  " + summaryline2 + "\r\n  " +  summaryline3 + "\r\n  " + summaryline4 + "\r\n    " +  summaryline5 + "\r\n    " + summaryline6 + "\r\n    " + summaryline7 + "\r\n    " + summaryline8 + "\r\n    " + summaryline9 + "\r\n    "
     if sumerr :
-        oncallsummarytxt += summaryline10
+        oncallsummarytxt += summaryline10 
     if (not ENABLE_Auto_Deletion) :
-        oncallsummarytxt += summaryline11
+        oncallsummarytxt += summaryline11 + "\r\n-----------------------CUT HERE AND PASTE INTO SERVICE NOW FOR MANUAL---------------------------\r\n" + manualDeleteString
 
     oncallsummarytxt += "\r\n"
 
-    summarytxt += "\r\n" + oncallsummarytxt
+    summarytxt += "\r\n" + oncallsummarytxt 
 
+    
 
-    send_email(oncallsummarytxt + oncallactionsummarytxt, NotifyList, 'replies-disabled@sas.com', 'On-Call Exodus Run Summary Results for Expired Clients in ' + env)
-    send_email(summarytxt, AUTHOR, 'replies-disabled@sas.com', 'Application Owner: Exodus Run Summary Results for Expired Clients in ' + env)
+    send_email(oncallsummarytxt + oncallactionsummarytxt, NotifyList, 'replies-disabled@sas.com', 'On-Call Exodus Run Summary Results for Expired Clients in ' + SNCI)
+    if ((expiredcount > MIN_DELETE) and (not ENABLE_Auto_Deletion)) :
+       summarytxt += "\r\n--------------------------Instructions to Enable Manual Deletion-------------------\r\n\r\n1) Access the Environment and edit the deployment sas-adxr-exodus\r\n2) Change the Value for ENABLE_MANUAL_DELETION and ENABLE_Auto_Deletion to be True and save the deployment.\r\n3)  After the run completed, edit the same deployment and reset the value you set to False\r\n-----------------------------------------------------------------------------------"
+       send_email(summarytxt, AUTHOR, 'replies-disabled@sas.com', 'Application Owner: -=!DELETE REQUIRED!=- Exodus Run Summary Results for Expired Clients in ' + SNCI)
+    else :
+       send_email(summarytxt, AUTHOR, 'replies-disabled@sas.com', 'Application Owner: Exodus Run Summary Results for Expired Clients in ' + SNCI)
 
 
 
@@ -601,7 +665,7 @@ def test_expire (namespaces) :
 def send_email(msg, To, From, Subject):
     if (ENABLE_ACTION_EMAIL) :
         email_msg = MIMEMultipart()
-        s = smtplib.SMTP(host='mailhost.fyi.sas.com', port=25)
+        s = smtplib.SMTP(host='mailhost.na.sas.com', port=25)
         email_msg['From'] = From
         email_msg['To'] = To
         email_msg['Subject'] = Subject
@@ -643,5 +707,6 @@ namespaces = v1.list_namespace(label_selector='adx.sas.com/tenant')
 
 ## Main Code
 
+print ('Beginning the Run of Exodus.')
 test_expire (namespaces)
 
